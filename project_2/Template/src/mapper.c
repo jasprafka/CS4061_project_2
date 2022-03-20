@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
 
 		char *retChunk = getChunkData(mapperID);
 		if(retChunk == NULL) {
-      		printf("Error: Empty data");
+      		// printf("Error: Empty data");
 			break;
 		}
 		count++;
@@ -223,15 +223,19 @@ int main(int argc, char *argv[]) {
      *
      *   
      */
-    FILE *fd = fopen("test.txt", "a+");
-    if(fd==NULL)
-       printf("ERROR: Cannot open the file");
-    int ret = fwrite(chunkData, sizeof(char), chunkSize, fd);
-    if(ret < 0){
-       printf("ERROR: Cannot write to file \n");
-       exit(0);
-    }
-    fclose(fd);
+		FILE *fd = fopen("test.txt", "a+");
+		if(fd==NULL)
+			printf("ERROR: Cannot open the file");
+		// int ret = fwrite(chunkData, sizeof(char), chunkSize, fd);
+		if((chunkData[0] != 'A') && (chunkData[0] != 'A') && (chunkData[0] != 'A')){
+			int ret = fprintf(fd, "%s", chunkData);
+			if(ret < 0){
+				printf("ERROR: Cannot write to file \n");
+				exit(0);
+			}
+		}	
+		fclose(fd);
+	// end debug code
 
 		//map(chunkData);
 	}
