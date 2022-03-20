@@ -17,10 +17,14 @@
 #define chunkSize 1024
 #define MSGSIZE 1100
 
-struct msgBuffer {
+#ifndef ACCESSPERMS
+#define ACCESSPERMS 0777
+#endif
+
+typedef struct msgBuffer {
     long msgType;
     char msgText[MSGSIZE];
-};
+}msgBuffer;
 
 // mapper side
 int validChar(char c);

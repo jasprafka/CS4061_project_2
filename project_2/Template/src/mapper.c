@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
 
 		char *retChunk = getChunkData(mapperID);
 		if(retChunk == NULL) {
-      printf("Error: Empty data");
+      		printf("Error: Empty data");
 			break;
 		}
 		count++;
