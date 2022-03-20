@@ -30,13 +30,14 @@ char *getChunkData(int mapperID) {
   //Otherwise return pointer to the chunk data. 
   //
     if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
-	buf->msgText[0] = 'A';
-	buf->msgText[1] = 'C';
-	buf->msgText[2] = 'K';
-	msgsnd(mid, (void*)buf, sizeof(buf), 0);
-//	msgctl(mid, IPC_RMID, 0);			// remove queue
-	free(buf);
-	return NULL;
+		buf->msgText[0] = 'A';
+		buf->msgText[1] = 'C';
+		buf->msgText[2] = 'K';
+		buf->msgType = 100;
+		msgsnd(mid, (void*)buf, sizeof(buf), 0);
+	//	msgctl(mid, IPC_RMID, 0);			// remove queue
+		free(buf);
+		return NULL;
     }
 
 //    msgctl(mid, IPC_RMID, 0);				// remove queue
@@ -145,7 +146,7 @@ void sendChunkData(char *inputFile, int nMappers) {
     //wait to receive ACK from all mappers for END notification
 	int mappersDone = 0;
 	while(mappersDone < nMappers) {
-		if(msgrcv(mid, buf, sizeof(msgBuffer), nMappers + 1, 0) != -1){ // Blocks until next mapper is done
+		if(msgrcv(mid, buf, sizeof(msgBuffer), 100 /*nMappers + 1*/, 0) != -1){ // Blocks until next mapper is done
 			
 			// Ensure ACK recieved
 			if((buf->msgText[0] == 'A') && (buf->msgText[1] == 'C') && (buf->msgText[2] == 'K'))
