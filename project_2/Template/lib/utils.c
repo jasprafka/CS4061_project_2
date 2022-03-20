@@ -20,12 +20,30 @@ char *getChunkData(int mapperID) {
   // i.e the last chunk may not have a full 1024 valid bytes, it may have fewer
   // the last valid byte will be just before '\0'
     
+    msgBuffer *buf = (msgBuffer *)malloc(sizeof(msgBuffer));
+    msgrcv(mid, (void*)buf, sizeof(msgBuffer), mapperID, 0);
 
-
+    char * chunkPtr = (char *)malloc(sizeof(msgBuffer)+1);
+    strcpy(chunkPtr, buf->msgText);
   //TODO check for END message and send ACK to master and return NULL. 
   // When you send ACK message to master, msgType should be set equal to nMappers + 1
   //Otherwise return pointer to the chunk data. 
   //
+    if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
+	buf->msgText[0] = 'A';
+	buf->msgText[1] = 'C';
+	buf->msgText[2] = 'K';
+	msgsnd(mid, (void*)buf, sizeof(buf), 0);
+//	msgctl(mid, IPC_RMID, 0);			// remove queue
+	free(buf);
+	return NULL;
+    }
+
+//    msgctl(mid, IPC_RMID, 0);				// remove queue
+    free(buf);
+
+    return chunkPtr;
+
 }
 
 void sendChunkData(char *inputFile, int nMappers) {
