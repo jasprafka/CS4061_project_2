@@ -2,7 +2,6 @@
 
 char *getChunkData(int mapperID) {
 
-	//TODO open message queue
 	// open the message queue
     int mid;
     key_t key = 100;
@@ -14,37 +13,38 @@ char *getChunkData(int mapperID) {
 	    exit(1);
     }
 
-
   //TODO receive chunk from the master
   // When you receive the chunk, the valid portion of the chunk data will be up to the first '\0' char
   // i.e the last chunk may not have a full 1024 valid bytes, it may have fewer
   // the last valid byte will be just before '\0'
-    
     msgBuffer *buf = (msgBuffer *)malloc(sizeof(msgBuffer));
-    msgrcv(mid, (void*)buf, sizeof(msgBuffer), mapperID, 0);
+	
+    if((msgrcv(mid, (void*)buf, sizeof(msgBuffer), mapperID, 0)) == -1){
+	printf("Error: failed to read message in getChunkData\n");
+    }
 
     char * chunkPtr = (char *)malloc(sizeof(msgBuffer)+1);
+	
     strcpy(chunkPtr, buf->msgText);
+	
   //TODO check for END message and send ACK to master and return NULL. 
   // When you send ACK message to master, msgType should be set equal to nMappers + 1
   //Otherwise return pointer to the chunk data. 
-  //
     if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
-		buf->msgText[0] = 'A';
-		buf->msgText[1] = 'C';
-		buf->msgText[2] = 'K';
-		buf->msgType = 100;
-		msgsnd(mid, (void*)buf, sizeof(buf), 0);
-	//	msgctl(mid, IPC_RMID, 0);			// remove queue
-		free(buf);
-		return NULL;
+	buf->msgText[0] = 'A';
+	buf->msgText[1] = 'C';
+	buf->msgText[2] = 'K';
+	buf->msgType = 100;
+	    
+	if((msgsnd(mid, (void*)buf, sizeof(buf), 0)) == -1){
+		printf("Error: failed to send message in getChunkData\n");
+	}
+	free(buf);
+	return NULL;
     }
 
-//    msgctl(mid, IPC_RMID, 0);				// remove queue
     free(buf);
-
     return chunkPtr;
-
 }
 
 void sendChunkData(char *inputFile, int nMappers) {
