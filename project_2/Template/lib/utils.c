@@ -194,24 +194,113 @@ int getInterData(char *key, int reducerID) {
 void shuffle(int nMappers, int nReducers) {
 
     //TODO open message queue
-     
+    int mid;
+    key_t key = 100;
+    mid = msgget(key, 0666 | IPC_CREAT);
+    if(mid == -1) {
+		printf("ERROR: failed to open message queue\n");
+	    exit(1);
+    } 
 
+	// Create buffer for sending messages to message queue
+    msgBuffer *buf = (msgBuffer *)malloc (sizeof(msgBuffer));
 
     //TODO traverse the directory of each Mapper and send the word filepath to the reducer
     //You should check dirent is . or .. or DS_Store,etc. If it is a regular
     //file, select the reducer using a hash function and send word filepath to
     //reducer 
+	
+	// dir ptrs for MapOut and its child dirs
+	DIR * mapOutDir;
+	DIR * mapperDir;
 
+	// open MapOut
+	if((mapOutDir = opendir("./output/MapOut")) == NULL) {
+		printf("ERROR: failed to open dir MapOut\n");
+		exit(1);
+	}
 
+	struct dirent * mapOutDirEnt;
+	struct dirent * mapperDirEnt;
+	int mapperID, reducerID;
+	char mapNdirName[256];
+	char wordFilePath[512];
+
+	// iterate over MapOut dir entries
+	while((mapOutDirEnt = readdir(mapOutDir)) != NULL) {
+		
+		// ignore . and ..
+		if((mapOutDirEnt->d_type == DT_DIR) && mapOutDirEnt->d_name[0] != '.') {
+			mapperID = atoi(&mapOutDirEnt->d_name[4]);
+			
+			// open Map_n dir
+			sprintf(mapNdirName, "./output/MapOut/Map_%d", mapperID);
+			if((mapperDir = opendir(mapNdirName)) == NULL) {
+				printf("ERROR: failed to open dir %s\n", mapNdirName);
+				break;
+			}
+
+			// iterate over all word.txt files in Map_n, send to reducers
+			while((mapperDirEnt = readdir(mapperDir)) != NULL) {
+				if((mapperDirEnt->d_type == DT_REG) && mapperDirEnt->d_name[0] != '.') {
+					
+					sprintf(wordFilePath, "%s/%s", mapNdirName, mapperDirEnt->d_name);
+					sprintf(buf->msgText, "%s", wordFilePath);
+
+					reducerID = hashFunction(buf->msgText, nReducers);
+					buf->msgType = reducerID;
+
+					// Send message to reducer
+					if(msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1) {
+						printf("ERROR: failed to send message to reducer\n");
+						break;
+					}
+				}
+			}
+			// close MapOut dir
+			if(closedir(mapperDir) == -1) {
+				printf("ERROR: failed to close dir MapOut\n");
+			}
+		}
+	}
+
+	// close MapOut dir
+	if(closedir(mapOutDir) == -1) {
+		printf("ERROR: failed to close dir MapOut\n");
+	}
 
 
     //TODO inputFile read complete, send END message to reducers
+	char endMsg[MSGSIZE] = {'E', 'N', 'D'};
+	sprintf(buf->msgText, "%s", endMsg);
 
-    
-
+	for (size_t i = 0; i < nReducers; i++)
+	{
+		buf->msgType = i + 1;
+		if(msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1) {
+			printf("ERROR: failed to send message\n");
+			break;
+		}
+	}
 
     
     //TODO  wait for ACK from the reducers for END notification
+	//wait to receive ACK from all reducers for END notification
+	int reducersDone = 0;
+	while(reducersDone < nReducers) {
+		if(msgrcv(mid, buf, sizeof(msgBuffer), 100 /*nReducers + 1*/, 0) != -1){ // Blocks until next reducers is done
+			
+			// Ensure ACK recieved
+			if((buf->msgText[0] == 'A') && (buf->msgText[1] == 'C') && (buf->msgText[2] == 'K'))
+				reducersDone++;
+
+		} else {
+			printf("ERROR: failed to read message\n");
+		}
+	}
+
+	// free memory allocated for buffer
+	free(buf);
 }
 
 // check if the character is valid for a word

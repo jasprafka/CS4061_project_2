@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
 	//interDS = NULL;
 
 	//create folder specifically for this mapper in output/MapOut
-	//mapOutDir = createMapDir(mapperID);
+	mapOutDir = createMapDir(mapperID);
 
 
 	int count = 0;
@@ -223,26 +223,26 @@ int main(int argc, char *argv[]) {
      *
      *   
      */
-		FILE *fd = fopen("test.txt", "a+");
-		if(fd==NULL)
-			printf("ERROR: Cannot open the file");
-		// int ret = fwrite(chunkData, sizeof(char), chunkSize, fd);
-		if((chunkData[0] != 'A') && (chunkData[0] != 'A') && (chunkData[0] != 'A')){
-			int ret = fprintf(fd, "%s", chunkData);
-			if(ret < 0){
-				printf("ERROR: Cannot write to file \n");
-				exit(0);
-			}
-		}	
-		fclose(fd);
+		// FILE *fd = fopen("test.txt", "a+");
+		// if(fd==NULL)
+		// 	printf("ERROR: Cannot open the file");
+		// // int ret = fwrite(chunkData, sizeof(char), chunkSize, fd);
+		// if((chunkData[0] != 'A') && (chunkData[0] != 'A') && (chunkData[0] != 'A')){
+		// 	int ret = fprintf(fd, "%s", chunkData);
+		// 	if(ret < 0){
+		// 		printf("ERROR: Cannot write to file \n");
+		// 		exit(0);
+		// 	}
+		// }	
+		// fclose(fd);
 	// end debug code
 
-		//map(chunkData);
+		map(chunkData);
 	}
 
 	//student code
-	//writeIntermediateDS();
-	//freeInterDS(interDS);
+	writeIntermediateDS();
+	freeInterDS(interDS);
 
 	return 0;
 }
