@@ -28,4 +28,4 @@ t1:
 clean:
 	rm lib/utils.o mapreduce mapper reducer
 	rm -rf output
-	rm test.txt
+#   rm test.txt
