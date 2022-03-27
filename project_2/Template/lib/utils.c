@@ -171,7 +171,7 @@ int hashFunction(char* key, int reducers){
     while ((c = *key++)!='\0')
         hash = c + (hash << 6) + (hash << 16) - hash;
 
-    return (hash % reducers);
+    return (hash % reducers) + 1;
 }
 
 int getInterData(char *key, int reducerID) {
