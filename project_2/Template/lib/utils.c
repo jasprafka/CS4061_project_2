@@ -17,13 +17,13 @@ char *getChunkData(int mapperID) {
   // When you receive the chunk, the valid portion of the chunk data will be up to the first '\0' char
   // i.e the last chunk may not have a full 1024 valid bytes, it may have fewer
   // the last valid byte will be just before '\0'
-    msgBuffer *buf = (msgBuffer *)malloc(sizeof(msgBuffer));
+    struct msgBuffer *buf = (struct msgBuffer *)malloc(sizeof(struct msgBuffer));
 	
-    if((msgrcv(mid, (void*)buf, sizeof(msgBuffer), mapperID, 0)) == -1){
+    if((msgrcv(mid, (void*)buf, sizeof(struct msgBuffer), mapperID, 0)) == -1){
 	printf("Error: failed to read message in getChunkData\n");
     }
 
-    char * chunkPtr = (char *)malloc(sizeof(msgBuffer)+1);
+    char * chunkPtr = (char *)malloc(sizeof(struct msgBuffer)+1);
 	
     strcpy(chunkPtr, buf->msgText);
 	
@@ -59,13 +59,15 @@ void sendChunkData(char *inputFile, int nMappers) {
     int mid;
     key_t key = 100;
     mid = msgget(key, 0666 | IPC_CREAT);
+	
     if(mid == -1) {
 		printf("ERROR: failed to open message queue\n");
 	    exit(1);
     } 
-
+	
+	
 	// Create buffer for sending messages to message queue
-    msgBuffer *buf = (msgBuffer *)malloc (sizeof(msgBuffer));
+    struct msgBuffer *buf = (struct msgBuffer *)malloc (sizeof(struct msgBuffer));
     
 	// Open input file
 	int fd = open(inputFile, O_RDONLY);
@@ -77,7 +79,7 @@ void sendChunkData(char *inputFile, int nMappers) {
 	// Iterate over input data, sending 1024 byte chunks to each mapper
 	int readCode;
 	while((readCode = read(fd, buf->msgText, 1024)) > 0){
-
+		
 		if(readCode == -1) {
 			printf("ERROR: failed to read from file\n");
 			break;
@@ -92,12 +94,12 @@ void sendChunkData(char *inputFile, int nMappers) {
 		// Assign chunks to mapperID in round robin fashion
 		buf->msgType = (mapperID % nMappers) + 1; 
 		mapperID++;
-
+		
 		// If this statement evaluates true, chunk truncated a word; 
 		// reposition file pointer to previous ' ' or '\n'
 		int i = readCode - 1;
 		if((buf->msgText[i] != ' ') && (buf->msgText[i] != '\n')) {
-				
+			
 			// Back up to previous ' ' or '\n'
 			while ((buf->msgText[i] != ' ') && (buf->msgText[i] != '\n')) {
 				i--;
@@ -111,12 +113,12 @@ void sendChunkData(char *inputFile, int nMappers) {
 			}
 			buf->msgText[i + 1] = '\0';
 		}
-
+		
 		// Print to test file
 		// fprintf(writeTest, "%s\n", buf->msgText);
 
 		// Send message to mapper
-		if(msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1) {
+		if(msgsnd(mid, buf, sizeof(struct msgBuffer), 0) == -1) {
 			printf("ERROR: failed to send message\n");
 			break;
 		}
@@ -129,6 +131,7 @@ void sendChunkData(char *inputFile, int nMappers) {
 	if(close(fd) == -1) {
 		printf("ERROR: failed to close input file\n");
     }
+	
 
     // inputFile read complete, send END message to each mapper
 	char endMsg[MSGSIZE] = {'E', 'N', 'D'};
@@ -136,17 +139,19 @@ void sendChunkData(char *inputFile, int nMappers) {
 
 	for (size_t i = 0; i < nMappers; i++)
 	{
+
 		buf->msgType = i + 1;
-		if(msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1) {
+		if(msgsnd(mid, buf, sizeof(struct msgBuffer), 0) == -1) {
 			printf("ERROR: failed to send message\n");
 			break;
 		}
 	}
-
+	
+	
     //wait to receive ACK from all mappers for END notification
 	int mappersDone = 0;
 	while(mappersDone < nMappers) {
-		if(msgrcv(mid, buf, sizeof(msgBuffer), 100 /*nMappers + 1*/, 0) != -1){ // Blocks until next mapper is done
+		if(msgrcv(mid, buf, sizeof(struct msgBuffer), 100 , 0) != -1){ // Blocks until next mapper is done
 			
 			// Ensure ACK recieved
 			if((buf->msgText[0] == 'A') && (buf->msgText[1] == 'C') && (buf->msgText[2] == 'K'))
@@ -155,11 +160,15 @@ void sendChunkData(char *inputFile, int nMappers) {
 		} else {
 			printf("ERROR: failed to read message\n");
 		}
+		
 	}
 
 	// free memory allocated for buffer
 	free(buf);
-
+	
+	if(msgctl(mid, IPC_RMID, NULL) == -1) printf("ERROR: failed to rm message queue\n");
+	
+	
 }
 
 // hash function to divide the list of word.txt files across reducers
@@ -186,20 +195,20 @@ int getInterData(char *key, int reducerID) {
 	}
 
     //TODO receive data from the master
-	msgBuffer *buf = (msgBuffer *)malloc(sizeof(msgBuffer));
-	if((msgrcv(mid, buf, sizeof(msgBuffer), reducerID, 0)) == -1){
+	struct msgBuffer *buf = (struct msgBuffer *)malloc(sizeof(struct msgBuffer));
+	if((msgrcv(mid, buf, sizeof(struct msgBuffer), reducerID, 0)) == -1){
 		printf("ERROR: failed to read message\n");
 	}
 
     //TODO check for END message and send ACK to master and then return 0
     //Otherwise return 1
 	if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
-		memset(buf, '\0', sizeof(msgBuffer));
+		memset(buf, '\0', sizeof(struct msgBuffer));
 		buf->msgText[0] = 'A';
 		buf->msgText[1] = 'C';
 		buf->msgText[2] = 'K';
 		buf->msgType = 100;
-		if((msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1)){
+		if((msgsnd(mid, buf, sizeof(struct msgBuffer), 0) == -1)){
 			printf("ERROR: failed to send ACK to shuffle()\n");
 			exit(1);
 		}
@@ -224,7 +233,7 @@ void shuffle(int nMappers, int nReducers) {
     } 
 
 	// Create buffer for sending messages to message queue
-    msgBuffer *buf = (msgBuffer *)malloc (sizeof(msgBuffer));
+    struct msgBuffer *buf = (struct msgBuffer *)malloc (sizeof(struct msgBuffer));
 
     //TODO traverse the directory of each Mapper and send the word filepath to the reducer
     //You should check dirent is . or .. or DS_Store,etc. If it is a regular
@@ -265,14 +274,18 @@ void shuffle(int nMappers, int nReducers) {
 			while((mapperDirEnt = readdir(mapperDir)) != NULL) {
 				if((mapperDirEnt->d_type == DT_REG) && mapperDirEnt->d_name[0] != '.') {
 					
+					// sprintf(wordFilePath, "%s", mapperDirEnt->d_name);
+
 					sprintf(wordFilePath, "%s/%s", mapNdirName, mapperDirEnt->d_name);
 					sprintf(buf->msgText, "%s", wordFilePath);
 
-					reducerID = hashFunction(buf->msgText, nReducers);
+					// printf("%s\n",wordFilePath);
+
+					reducerID = hashFunction(mapperDirEnt->d_name, nReducers);
 					buf->msgType = reducerID;
 
 					// Send message to reducer
-					if(msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1) {
+					if(msgsnd(mid, buf, sizeof(struct msgBuffer), 0) == -1) {
 						printf("ERROR: failed to send message to reducer\n");
 						break;
 					}
@@ -298,7 +311,7 @@ void shuffle(int nMappers, int nReducers) {
 	for (size_t i = 0; i < nReducers; i++)
 	{
 		buf->msgType = i + 1;
-		if(msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1) {
+		if(msgsnd(mid, buf, sizeof(struct msgBuffer), 0) == -1) {
 			printf("ERROR: failed to send message\n");
 			break;
 		}
@@ -309,7 +322,7 @@ void shuffle(int nMappers, int nReducers) {
 	//wait to receive ACK from all reducers for END notification
 	int reducersDone = 0;
 	while(reducersDone < nReducers) {
-		if(msgrcv(mid, buf, sizeof(msgBuffer), 100 /*nReducers + 1*/, 0) != -1){ // Blocks until next reducers is done
+		if(msgrcv(mid, buf, sizeof(struct msgBuffer), 100 /*nReducers + 1*/, 0) != -1){ // Blocks until next reducers is done
 			
 			// Ensure ACK recieved
 			if((buf->msgText[0] == 'A') && (buf->msgText[1] == 'C') && (buf->msgText[2] == 'K'))
@@ -322,6 +335,8 @@ void shuffle(int nMappers, int nReducers) {
 
 	// free memory allocated for buffer
 	free(buf);
+
+	if(msgctl(mid, IPC_RMID, NULL) == -1) printf("ERROR: failed to rm message queue\n");
 }
 
 // check if the character is valid for a word
