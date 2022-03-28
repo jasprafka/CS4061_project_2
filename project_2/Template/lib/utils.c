@@ -171,23 +171,44 @@ int hashFunction(char* key, int reducers){
     while ((c = *key++)!='\0')
         hash = c + (hash << 6) + (hash << 16) - hash;
 
-    return (hash % reducers);
+    return (hash % reducers) + 1;
 }
 
 int getInterData(char *key, int reducerID) {
-    //TODO open message queue
-      
-
-
+ //TODO open message queue
+//	printf("getinterdata\n");
+	int mid;
+	key_t qid = 100;
+	mid = msgget(qid, 0666 | IPC_CREAT);
+	if(mid == -1){
+		printf("ERROR: failed to open message queue\n");
+		exit(1);
+	}
 
     //TODO receive data from the master
-     
-
-
+	msgBuffer *buf = (msgBuffer *)malloc(sizeof(msgBuffer));
+	if((msgrcv(mid, buf, sizeof(msgBuffer), reducerID, 0)) == -1){
+		printf("ERROR: failed to read message\n");
+	}
 
     //TODO check for END message and send ACK to master and then return 0
     //Otherwise return 1
+	if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
+		memset(buf, '\0', sizeof(msgBuffer));
+		buf->msgText[0] = 'A';
+		buf->msgText[1] = 'C';
+		buf->msgText[2] = 'K';
+		buf->msgType = 100;
+		if((msgsnd(mid, buf, sizeof(msgBuffer), 0) == -1)){
+			printf("ERROR: failed to send ACK to shuffle()\n");
+			exit(1);
+		}
+		free(buf);
+		return(0);
+	} else{ strcpy(key, buf->msgText); }
 
+	free(buf);
+	return(1);
 
 }
 

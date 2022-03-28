@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 		exit(0);
 	}
 	sleep(1);
-	/*
+	
 	// spawn reducers
 	char *reducerArgv[] = {"./reducer", NULL, NULL};
 	execute(reducerArgv, nReducers);
@@ -80,5 +80,5 @@ int main(int argc, char *argv[]) {
     while (wait(&status) > 0);
 
 	return 0;
-  */
+ 
 }
