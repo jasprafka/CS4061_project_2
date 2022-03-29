@@ -2,35 +2,32 @@
 
 char *getChunkData(int mapperID) {
 
-	// open the message queue
-    int mid;
-    key_t key = 100;
-	// if this code fails, try uncommenting the following line and commenting out the one after
-	// mid = msgget(key, 0666);
-    mid = msgget(key, 0666 | IPC_CREAT);
-    if(mid == -1) {
-		printf("ERROR: failed to open message queue\n");
-	    exit(1);
-    }
+// open the message queue
+int mid;
+key_t key = 100;
+mid = msgget(key, 0666 | IPC_CREAT);
+if(mid == -1) {
+	printf("ERROR: failed to open message queue\n");
+	exit(1);
+}
 
-  //TODO receive chunk from the master
-  // When you receive the chunk, the valid portion of the chunk data will be up to the first '\0' char
-  // i.e the last chunk may not have a full 1024 valid bytes, it may have fewer
-  // the last valid byte will be just before '\0'
-    struct msgBuffer *buf = (struct msgBuffer *)malloc(sizeof(struct msgBuffer));
-	
-    if((msgrcv(mid, (void*)buf, sizeof(struct msgBuffer), mapperID, 0)) == -1){
+  	//TODO receive chunk from the master
+  	// When you receive the chunk, the valid portion of the chunk data will be up to the first '\0' char
+  	// i.e the last chunk may not have a full 1024 valid bytes, it may have fewer
+  	// the last valid byte will be just before '\0'
+struct msgBuffer *buf = (struct msgBuffer *)malloc(sizeof(struct msgBuffer));
+if((msgrcv(mid, (void*)buf, sizeof(struct msgBuffer), mapperID, 0)) == -1){
 	printf("Error: failed to read message in getChunkData\n");
-    }
+}
 
-    char * chunkPtr = (char *)malloc(sizeof(struct msgBuffer)+1);
+	// make a pointer to the chunk data to return to the mapper
+char * chunkPtr = (char *)malloc(sizeof(struct msgBuffer)+1);
+strcpy(chunkPtr, buf->msgText);
 	
-    strcpy(chunkPtr, buf->msgText);
-	
-  //TODO check for END message and send ACK to master and return NULL. 
-  // When you send ACK message to master, msgType should be set equal to nMappers + 1
-  //Otherwise return pointer to the chunk data. 
-    if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
+  	//TODO check for END message and send ACK to master and return NULL. 
+  	// When you send ACK message to master, msgType should be set equal to nMappers + 1
+  	//Otherwise return pointer to the chunk data. 
+ if(buf->msgText[0] == 'E' && buf->msgText[1] == 'N' && buf->msgText[2] == 'D'){
 	buf->msgText[0] = 'A';
 	buf->msgText[1] = 'C';
 	buf->msgText[2] = 'K';
@@ -41,10 +38,10 @@ char *getChunkData(int mapperID) {
 	}
 	free(buf);
 	return NULL;
-    }
+}
 
-    free(buf);
-    return chunkPtr;
+free(buf);
+return chunkPtr;
 }
 
 void sendChunkData(char *inputFile, int nMappers) {
@@ -185,7 +182,6 @@ int hashFunction(char* key, int reducers){
 
 int getInterData(char *key, int reducerID) {
  //TODO open message queue
-//	printf("getinterdata\n");
 	int mid;
 	key_t qid = 100;
 	mid = msgget(qid, 0666 | IPC_CREAT);
@@ -214,7 +210,7 @@ int getInterData(char *key, int reducerID) {
 		}
 		free(buf);
 		return(0);
-	} else{ strcpy(key, buf->msgText); }
+	} else{ strcpy(key, buf->msgText); }	// put file path in key pointer for reducer to access
 
 	free(buf);
 	return(1);
