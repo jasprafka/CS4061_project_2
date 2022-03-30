@@ -21,7 +21,7 @@ if((msgrcv(mid, (void*)buf, sizeof(struct msgBuffer), mapperID, 0)) == -1){
 }
 
 	// make a pointer to the chunk data to return to the mapper
-char * chunkPtr = (char *)malloc(sizeof(struct msgBuffer)+1);
+char * chunkPtr = (char *)malloc(sizeof(struct msgBuffer));
 strcpy(chunkPtr, buf->msgText);
 	
   	//TODO check for END message and send ACK to master and return NULL. 
